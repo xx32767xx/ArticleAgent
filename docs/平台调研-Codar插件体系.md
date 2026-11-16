@@ -1,5 +1,6 @@
-# Codar 插件开发调研笔记
+# 平台调研：Codar 插件体系
 
+> 主题：Codar 平台的事实性调研（插件格式、安装结构、发布流程）。只记录平台事实，不记录我们的决策（决策见 `docs/决策记录.md`）。
 > 调研对象：科搭 Codar（SpeedAI 出品）桌面端 v0.3.14 + SpeedSkills 插件市场（skill.speedai.com）
 > 调研方式：解包安装目录 `E:\codar\codar-desktop`（app.asar）、分析本地数据目录 `~/.codar`、抓取官方 OpenAPI / v4 契约文档
 > 日期：2026-11
