@@ -1,43 +1,43 @@
 # 平台调研：Codar 插件体系
 
 > **文档编号：DOC-005** · 状态：生效
-> 主题：Codar 平台的事实性调研（插件格式、安装结构、发布流程）。只记录平台事实，不记录我们的决策（决策见 `docs/决策记录.md`）。
-> 调研对象：科搭 Codar（SpeedAI 出品）桌面端 v0.3.14 + SpeedSkills 插件市场（skill.speedai.com）
-> 调研方式：解包安装目录 `E:\codar\codar-desktop`（app.asar）、分析本地数据目录 `~/.codar`、抓取官方 OpenAPI / v4 契约文档
-> 日期：2026-11
+> 这个文件记录科搭 Codar 平台的事实：插件由什么组成、长什么样、怎么装、怎么上架。
+> 只写平台事实，不写我们的决定（决定见 DOC-002）。平台机制变了，这里跟着更新。
+> 调研对象：科搭 Codar（SpeedAI 出品）桌面端 v0.3.14，以及插件市场 SpeedSkills（skill.speedai.com）。
+> 调研方式：拆开安装目录 `E:\codar\codar-desktop`、查看本地数据目录 `~/.codar`、抓取官方接口文档。
 
-## 1. 平台与运行形态
+## 1. 平台和运行方式
 
-- Codar 是桌面端科研 Agent 工作台（Windows/macOS），Web 版为 `codar-web.speedai.com`。
-- 内核：基于 Codex 系 agent 运行时（`context_manager` 支持 codar / codex / claude-code / vanilla 等），Electron 外壳 + Go sidecar 守护进程。
-- 本地数据根目录：`%USERPROFILE%\.codar\`（工程数据、插件、会话、工作区）。
-- 桌面用户数据：`%APPDATA%\codar-desktop`（Electron 缓存）；安装状态账本在 `~/.codar/desktop/`。
+- Codar 是桌面端科研智能体工作台（Windows/macOS），网页版在 `codar-web.speedai.com`。
+- 底层是 Codex 系的智能体运行时（可切换 codar / codex / claude-code 等运行方式），界面用 Electron，后台有一个 Go 写的守护进程。
+- 本地数据放在 `%USERPROFILE%\.codar\`（项目、插件、会话、工作区都在这里）。
+- 桌面端界面缓存放在 `%APPDATA%\codar-desktop`；安装记录在 `~/.codar/desktop/`。
 
-## 2. 插件三级模型（v4 契约）
+## 2. 插件的三层结构
 
 ```
-Marketplace ──收录──> Plugin ──包含──> Component (skill / mcp)
-独立来源 ───────────> Plugin（也可独立存在）
+市场（Marketplace）──收录──> 插件（Plugin）──包含──> 组件（Component：Skill 或 MCP）
+独立来源 ─────────────> 插件（也可以不经过市场）
 ```
 
-- **Marketplace**：目录与策展容器（SpeedSkills = 官方市场）；不可直接安装。
-- **Plugin**：可安装、可版本化的能力包，是安装/升级/权限确认/启停/卸载的原子单位。
-- **Component**：Skill（含 SKILL.md 的目录）或 MCP（`.mcp.json` 配置）；可 standalone 独立安装，也可由 Plugin 固定携带。
-- ID 规则：`规范化名称-8位短hash`，如 `pdf-btgerqw7`；本机导入生成 `local-skill-xxx`。
-- 官方以 v4 API 为准（`/api/v4/...`），v3 路由保留兼容。
+- **市场**：目录和策展的地方（SpeedSkills 是官方市场），本身不能直接安装。
+- **插件**：可安装、可版本化的能力包，安装、升级、权限确认、启用停用、卸载都以它为单位。
+- **组件**：Skill（一个包含 SKILL.md 的目录）或 MCP（一份 `.mcp.json` 配置）。组件可以单独安装，也可以由插件固定携带。
+- 组件编号规则：名称加 8 位短哈希，比如 `pdf-btgerqw7`；本机导入的编号是 `local-skill-xxx` 这种。
+- 官方以 v4 接口为准（`/api/v4/...`），v3 的旧接口还保留兼容。
 
-## 3. Plugin 包格式
+## 3. 插件包长什么样
 
 ```
 plugin-root/
-  .codex-plugin/plugin.json    # 清单（必需）
-  skills/<skill-name>/SKILL.md # 技能
-  skills/<skill-name>/references/ scripts/ assets/ agents/ ...
+  .codex-plugin/plugin.json    # 插件清单（必须有）
+  skills/<技能名>/SKILL.md      # 技能目录
+  skills/<技能名>/references/ scripts/ assets/ agents/ ...
   .mcp.json                    # MCP 配置（可选）
-  README.md                    # 使用文档（建议）
+  README.md                    # 使用说明（建议有）
 ```
 
-`plugin.json` 示例（内置 codar-foundation 实测）：
+`plugin.json` 的实际例子（从内置插件 codar-foundation 里拆出来的）：
 
 ```json
 {
@@ -55,67 +55,66 @@ plugin-root/
 }
 ```
 
-发布包由 SpeedSkills 以 tar.gz 分发，envelope 结构（`speedskills.plugin-package.v4`）：
-`schemaVersion / kind=plugin / plugin{id,name,version,permissions,capabilities} / manifest=".codex-plugin/plugin.json" / components[{componentId,componentVersion,kind,sha256,required,defaultEnabled,path}] / download{url,sha256,sizeBytes} / issuedAt`。
+上架时的发布包是 tar.gz，包里有一份清单（`speedskills.plugin-package.v4` 格式），包含：版本号、插件名称和版本、权限、包含的组件（编号、版本、哈希、是否需要、默认是否启用、路径）、下载地址和校验值。
 
-## 4. Skill 格式（Agent Skills 规范，通用）
+## 4. Skill 的格式（通用，Claude Code 和 Codex 也能用）
 
-- 一个目录 = 一个 Skill，根目录必须有 **`SKILL.md`**。
-- frontmatter 必填：
+- 一个目录就是一个 Skill，目录根下必须有 **`SKILL.md`**。
+- 文件开头有 YAML 头（frontmatter），必须写：
   ```yaml
   ---
-  name: arxiv-preflight            # 英文短名，Agent 用它识别
+  name: arxiv-preflight            # 英文短名，智能体靠它识别
   description: "做什么 + 什么时候用（触发条件写全）"
   license: MIT                     # 可选
   author: AIPOCH                   # 可选
   ---
   ```
-- 正文建议结构：何时使用 / 输入 / 工作流程（分步、可复现）/ 输出格式 / 安全与边界。
-- 支持子目录：`scripts/`（Python/Node 脚本）、`references/`（规则库、参考文档）、`assets/`（模板）、`agents/openai.yaml`（界面展示配置：display_name / short_description / default_prompt，用 `$skill-name` 引用）、`evals/`、`tests/`。
-- 兼容 Claude Code（`~/.claude/skills/`）与 Codex（`~/.codex/skills/`）及 Codar（导入本地 Skill）。
-- 权限：Skill 目录本身不声明权限；组件级 `permissions`（filesystem / network 为基础；shell / desktop / browser / downloads / mcp / clipboard 为高权限，安装前需用户确认）在发布/安装账本层维护。
-- MCP：`.mcp.json` 顶层 key 即 entryKey；Plugin 内路径写作 `.mcp.json#entryKey`。
+- 正文建议按这个顺序写：什么时候用 / 输入是什么 / 步骤（可复现）/ 输出什么 / 安全边界。
+- 可以带子目录：`scripts/`（Python、Node 脚本）、`references/`（规则、参考文档）、`assets/`（模板）、`agents/openai.yaml`（界面展示信息，用 `$技能名` 引用）、`evals/`（测试用例）、`tests/`。
+- 同一份 Skill 也能给 Claude Code（放 `~/.claude/skills/`）和 Codex（放 `~/.codex/skills/`）用；Codar 里用"导入本地 Skill"。
+- 权限：Skill 目录本身不写权限；权限记在组件层——`filesystem`（读写文件）、`network`（联网）是基础权限，不用额外交代；`shell`、`desktop`、`browser`、`downloads`、`mcp`、`clipboard` 是高权限，安装前要用户确认。
+- MCP：`.mcp.json` 里最外层的键名就叫 entryKey；在插件里引用写作 `.mcp.json#entryKey`。
 
-## 5. 本地安装结构（实机确认）
+## 5. 本地装好之后的结构（实机确认过）
 
 ```
 ~/.codar/
-  plugins/releases/{pluginId}/{version}/.codex-plugin/plugin.json + skills/...
-  components/skills/{componentId}/     # standalone skill
-  components/mcps/{componentId}/       # standalone mcp
-  plugins/data/{pluginId}/             # MCP 授权等可变数据
-  desktop/installed-plugins.json       # 插件账本（含 integrityManifest 文件哈希）
-  desktop/installed-components.json    # 组件账本（33 个组件：name/version/sha256/owners/installPath）
-  desktop/profile-marketplace-state.json # profile 级启停状态
+  plugins/releases/{插件编号}/{版本}/.codex-plugin/plugin.json + skills/...
+  components/skills/{组件编号}/     # 单独安装的 Skill
+  components/mcps/{组件编号}/       # 单独安装的 MCP
+  plugins/data/{插件编号}/          # 授权、密钥等可变数据
+  desktop/installed-plugins.json    # 插件安装记录（含每个文件的校验值）
+  desktop/installed-components.json # 组件安装记录（我们机器上有 33 个组件）
+  desktop/profile-marketplace-state.json  # 各模式下哪些组件启用
 ```
 
-- 桌面端「插件 → 管理 → 导入本地 Skill」：选择**包含 SKILL.md 的目录**即可导入（云电脑目标另有导入接口）。
-- 桌面端相关 API（客户端侧）：`/api/skill-market/v4/*`（installed / skills|mcps 列表、详情、install、update、import-local）、`/api/v4/...`（官方市场）。
+- 桌面端菜单"插件 → 管理 → 导入本地 Skill"：选一个**包含 SKILL.md 的目录**就能导入（云端电脑另有导入接口）。
+- 客户端用到的接口：`/api/skill-market/v4/*`（安装状态、列表、详情、安装、更新、导入本地），以及 `/api/v4/...`（官方市场）。
 
-## 6. 发布与上架
+## 6. 上架流程
 
-- **自助发布暂未开放**（v4 文档明确列为非目标）。流程：把 Skill/Plugin 压缩包交给管理员 → 管理后台「发布」上传 → 自动识别为独立 Skill / Plugin 并进入审核 → 审核通过上架 SpeedSkills。
-- 管理接口（服务端）：`POST /api/v4/admin/releases`（发布 Marketplace/Plugin/standalone Skill/MCP 归档）、`POST /api/v4/admin/releases/inspect`（预览）、`/api/v4/admin/*` 系列管理接口。
-- 安全：`securityStatus` = verified / unverified / blocked；高权限组件安装前必须确认。
-- 市场信息：SpeedSkills 收录 591 个科研 Skill、30 个领域插件、25 个 MCP；每次更新生成新版本与内容摘要。
+- **暂时没有开放自助上架**（v4 文档里明确列为非目标）。现在的方式：把 Skill 或插件的压缩包交给管理员 → 管理员在后台"发布"里上传 → 系统自动识别为独立 Skill 或插件并进入审核 → 审核通过后上架 SpeedSkills。
+- 管理员接口：发布接口（`/api/v4/admin/releases`）、预览接口（inspect），以及一组后台管理接口。
+- 安全状态分三档：已验证、未验证、已拦截；带高权限的组件安装前必须确认。
+- 市场规模：SpeedSkills 目前收录约 591 个科研 Skill、30 个领域插件、25 个 MCP；每次更新生成新版本和内容摘要。
 
-## 7. 与论文辅导需求（3/4/7）的映射建议
+## 7. 和我们的 3/4/7 怎么对应
 
-| 需求编号 | Codar 插件形态建议 | 关键点 |
+| 我们的模块 | 建议的插件形态 | 要点 |
 |---|---|---|
-| 3 论文辅导智能体 | Skill：`paper-coaching-tutor`（讲解型辅导） | SKILL.md 固定六段式讲解流程（是什么/写多少/怎么写/常见错误/范例对照/自检清单）；辅导话术与课程知识库放 references/；可选 scripts/ 做骨架与句式生成 |
-| 4 论文检测智能体 | Skill：`paper-quality-inspector`（检测型辅导） | scripts/ 放检测脚本（结构性/逻辑性/语言/规范/一致性五类规则，对标 14.3 的 CK-* 规则）；输出问题清单（位置/严重度/依据/修改建议）；references/ 放规则表与北航规范 |
-| 7 导师反馈落实追踪 | Skill：`advisor-feedback-tracker` | 待办模型、批注拆条、状态机（待处理→已修改→待复核→已关闭）、说明表；跨格式锚定（Word/PDF 批注回 LaTeX）；可用 MCP 对接批注/待办服务，或纯工作区文件 + scripts 实现 |
+| 3 论文辅导 | Skill：`paper-coach` | SKILL.md 里固定六段式讲解流程（是什么/写多少/怎么写/常见错误/范例对照/自检清单）；讲解话术和课程知识放 references；需要的话用 scripts 生成骨架和句式 |
+| 4 论文检测 | Skill：`paper-inspector` | scripts 里放检测逻辑（结构、逻辑、语言、规范、一致性五类，对应需求 14.3 的检查规则）；输出带位置、严重程度、依据、修改建议的问题清单；references 放规则表和规范原文 |
+| 7 导师反馈追踪 | Skill：`advisor-tracker` | 待办、批注拆条、状态流转（待处理→已修改→待复核→已关闭）；能做跨格式锚定（Word/PDF 批注对回 LaTeX 源码）；可以用 MCP 对接批注/待办服务，也可以纯本地文件加脚本 |
 
-- 建议先以纯 Skill（SKILL.md + scripts + references）做 MVP，验证通过后再考虑打包成 Plugin（一个 Plugin 携带三个 Skill），或发布为三个独立 Skill。
-- 与需求文档的对应：讲解型/检测型辅导 ↔ M4（8.4 FR-M4-01~09、14.2/14.3）；导师反馈落实追踪 ↔ M5（9.2~9.5、AC-06/AC-09）+ M9 留痕（FR-M9-06）。
+- 建议先用纯 Skill（SKILL.md + scripts + references）做原型，跑通后再考虑打包成一个插件，或者作为三个独立 Skill 发布。
+- 和需求文档的对应：讲解型/检测型辅导对应 M4（8.4 和 14.2/14.3）；导师反馈追踪对应 M5（9.2~9.5、验收场景 AC-06/AC-09）和 M9 留痕。
 
-## 8. 关键链接
+## 8. 有用链接
 
-- Codar 官网/下载：https://codar.speedai.com / https://codar.speedai.com/download
-- Codar 用户文档：https://codar.speedai.com/docs/plugins
-- SpeedSkills 市场：https://skill.speedai.com（在线生成 SKILL.md：/publish）
-- v4 API 契约：https://skill.speedai.com/docs/api/v4/api_v4.md
-- v4 数据模型：https://skill.speedai.com/docs/api/v4/models_v4.md
-- OpenAPI：https://skill.speedai.com/api/openapi.json
-- Agent 安装指引：https://skill.speedai.com/install/speedskills.md
+- 官网和下载：https://codar.speedai.com / https://codar.speedai.com/download
+- 用户文档：https://codar.speedai.com/docs/plugins
+- 市场：https://skill.speedai.com（在线生成 SKILL.md 在 /publish）
+- 平台接口文档：https://skill.speedai.com/docs/api/v4/api_v4.md
+- 平台数据结构：https://skill.speedai.com/docs/api/v4/models_v4.md
+- 接口总览：https://skill.speedai.com/api/openapi.json
+- 给智能体的安装指引：https://skill.speedai.com/install/speedskills.md

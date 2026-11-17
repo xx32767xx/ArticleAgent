@@ -1,5 +1,5 @@
-# servers/tracker/ 7 的记录与追踪服务（公共交付物，丁维护）
+# servers/tracker/ 7 的记录与追踪服务（公共，丁维护）
 
-- 内容：`record.*` / `query_board` / `query_events` / `verify_chain` 的本地服务（MCP 优先，CLI 兜底）。
-- 数据：`evidence/events.jsonl`（哈希链，唯一写入方为 7）。
-- 状态：待开工（丁负责）。
+- 放什么：记录、看板、回放、校验这些接口的本地服务（优先 MCP，命令行兜底）。
+- 数据放在 `evidence/events.jsonl`，而且只有这个服务能写。
+- 状态：丁负责，等开工。
