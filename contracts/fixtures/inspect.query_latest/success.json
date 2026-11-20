@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "inspect.summary.v1",
+  "runId": "11111111-1111-1111-1111-111111111111",
+  "docVersion": "v12",
+  "checkedAt": "2026-11-16T08:00:00Z",
+  "summary": { "P0": 2, "P1": 5, "P2": 3 },
+  "topIssueCategories": ["A", "D"],
+  "topIssues": [
+    {
+      "issueId": "22222222-2222-2222-2222-222222222222",
+      "category": "A",
+      "title": "摘要缺结论要素",
+      "severity": "P0",
+      "anchor": { "section": "摘要", "paragraph": 2 }
+    },
+    {
+      "issueId": "33333333-3333-3333-3333-333333333333",
+      "category": "D",
+      "title": "参考文献条目格式不符 GB/T 7714",
+      "severity": "P1",
+      "anchor": { "section": "参考文献", "paragraph": 1 }
+    }
+  ],
+  "moduleScore": { "structure": 4, "content": 3, "logic": 4, "language": 4, "standard": 3 }
+}
