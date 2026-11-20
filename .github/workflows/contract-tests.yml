@@ -20,8 +20,11 @@ jobs:
       - name: 安装依赖
         run: |
           python -m pip install --upgrade pip
-          pip install "mcp>=1.0" pytest
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt
+          else
+            pip install "mcp>=1.0" pytest
+          fi
       - name: 入口就绪检查(未就绪则跳过,不误红)
         id: guard
         run: |

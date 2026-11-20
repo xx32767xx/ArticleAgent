@@ -1,0 +1,10 @@
+# 项目依赖（Python）
+# 改动请单独提交并说明原因；CI 与本地都从这里安装。
+
+# MCP SDK：1.x / 2.x 均兼容（服务端已做条件导入，见 temp/MCPTest 演示）
+mcp>=1.0,<3
+
+# 测试
+pytest>=8.0          # 单元测试、契约测试
+jsonschema>=4.0      # 契约断言：字段校验（断言从"手写校验"升级到 schema 时用）
+pyyaml>=6.0          # 规则包（rulepacks）格式

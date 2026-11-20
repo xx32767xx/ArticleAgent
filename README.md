@@ -7,6 +7,12 @@
 
 ## 快速开始
 
+**环境**：在 conda 环境里装依赖（根目录统一维护，改动请走 PR）：
+
+```powershell
+pip install -r requirements.txt
+```
+
 **新同学或新会话，按这个顺序读：**
 
 1. `docs/交接说明.md`（DOC-001）——入口、进度、现在卡在哪（**先读这个**）
