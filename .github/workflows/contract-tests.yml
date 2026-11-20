@@ -1,13 +1,12 @@
-# 契约测试门禁:PR 时跑快档,合并进 main 后兜底,每晚跑慢档
+# 契约测试门禁:PR 时跑快档(合并门槛),合并进 main 后兜底
 # 说明见 DOC-004 §3.1「CI 门禁」。入口约定:tools/devkit/run_contract_tests.py
+# 真接口验证不设自动档,需要时由接口负责人本地手动跑:--mode real
 name: contract-tests
 
 on:
   pull_request:              # 每次开 PR / 更新 PR 自动跑(快档)
   push:
     branches: [ main ]       # 合并进 main 后再跑一遍(兜底)
-  schedule:
-    - cron: "0 18 * * *"     # 每晚跑一次(真接口 + 集成,慢档)
 
 jobs:
   quick:
@@ -35,33 +34,3 @@ jobs:
       - name: 跑契约测试(桩模式)
         if: steps.guard.outputs.ready == 'true'
         run: python tools/devkit/run_contract_tests.py --mode stub
-
-  slow:
-    name: 慢档(对真接口 + 集成)
-    if: github.event_name == 'schedule'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: 安装依赖
-        run: |
-          pip install "mcp>=1.0" pytest
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-      - name: 入口就绪检查
-        id: guard
-        run: |
-          if [ -f tools/devkit/run_contract_tests.py ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::契约测试入口尚未就绪,慢档跳过"
-          fi
-      - name: 跑契约测试(真模式)
-        if: steps.guard.outputs.ready == 'true'
-        run: python tools/devkit/run_contract_tests.py --mode real
-      - name: 跑端到端演示(AC-02/06/09,就绪后启用)
-        if: steps.guard.outputs.ready == 'true'
-        run: |
-          if [ -f tools/devkit/run_e2e.py ]; then python tools/devkit/run_e2e.py; else echo "E2E 入口未就绪,跳过"; fi
