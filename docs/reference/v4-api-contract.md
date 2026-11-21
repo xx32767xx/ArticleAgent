@@ -686,6 +686,69 @@ Plugin 中的 MCP 使用 `PluginPackageComponent.path` 表达同一映射，例�
 客户端仅可在 `.mcp.json` 恰好包含一个顶层 entry 时兼容推断，其他情况必须按 package
 contract 错误处理。v4 更新检查和 install event 仍尚未实现。
 
+### 7.6 Workflows
+
+Codar 预置工作流是只读目录资源，不是 Component，也不进入 Plugin package：
+
+~~~text
+GET /api/v4/workflows
+GET /api/v4/workflows/{workflowId}
+GET /api/v4/workflows/{workflowId}/releases/{version}
+~~~
+
+服务端支持时，`/api/client-config` 的 `endpoints.v4Workflows` 为 `/api/v4/workflows`；
+未声明时客户端应使用内置模板。
+
+列表只返回上架工作流，不分页，返回顺序即最终展示顺序（official DESC、sortOrder ASC、
+name ASC、id ASC），客户端不再排序：
+
+~~~json
+{
+  "items": [
+    {
+      "id": "bulk-rnaseq-k3f9a2xq",
+      "version": 3,
+      "sha256": "…",
+      "schemaVersion": 1,
+      "name": "Bulk RNA-seq 标准分析",
+      "name_cn": "",
+      "domainLabel": "生物信息学",
+      "domains": ["biomedicine"],
+      "description": "…",
+      "nodeCount": 7,
+      "source": {"type": "marketplace", "marketplaceId": "codar-biomed", "path": "workflows/bulk-rnaseq"},
+      "requires": [{"pluginId": "codar-transcriptomics", "pluginName": "转录组学", "componentIds": ["rnaseq-deg-abcd1234"]}],
+      "official": true,
+      "sortOrder": 0,
+      "updatedAt": "2026-11-18T00:00:00Z"
+    }
+  ],
+  "checkedAt": "2026-11-18T00:00:00Z"
+}
+~~~
+
+- 响应带强 ETag，计算范围是 `items`，不包含每次变化的 `checkedAt`；请求头
+  `If-None-Match` 命中时返回 304 且无响应体。比较采用弱比较规则，代理压缩后返回的
+  `W/"…"` 同样可以命中。列表使用 `Cache-Control: no-cache`。
+- `version` 是正整数，由 SpeedSkills 分配；同一 `id + version` 的 Markdown 不可变。
+- `sha256` 是对外 Markdown UTF-8 字节的 SHA-256。客户端只在摘要变化时下载正文，并在
+  保存前自行校验摘要。
+- `requires` 列出节点工具契约解析出的 Plugin 依赖；`source.type=plugin` 时所属 Plugin
+  总是第一项。`pluginName` 在读取时按 Plugin 当前中文名或名称生成。
+
+详情返回列表字段加当前 `markdown` 和 `releases`（`version`、`sha256`、`notes`、
+`releasedAt`，按版本倒序）。工作流不存在或已下架时返回 404
+`{"error":{"code":"not_found",…}}`。
+
+`releases/{version}` 返回 `id`、`version`、`sha256`、`schemaVersion`、`markdown`，使用
+`Cache-Control: public, max-age=31536000, immutable`。即使工作流已下架，历史版本仍可读取；
+版本不存在时返回 404。同一工作流 ID 的版本号永不复用：工作流删除后重新发布，版本从
+删除前的最大版本 + 1 开始。
+
+对外 Markdown 由 SpeedSkills 规范化：统一 LF 换行，移除来源中的 `id`、`version`、
+`updated`、`domains`、`basedOn`，并在 `schemaVersion`/`layoutDirection` 之后写入
+`id: "<workflowId>"` 和 `version: <n>`。
+
 ## 8. Plugin package
 
 ### 8.1 Envelope

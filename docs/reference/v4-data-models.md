@@ -614,7 +614,67 @@ type APIError struct {
 }
 ~~~
 
-## 10. 服务端内部边界
+## 10. Workflow 类型
+
+工作流是独立目录资源，不是 Component。公共列表项和版本文档：
+
+~~~go
+type WorkflowSource struct {
+	Type          string `json:"type"` // plugin | marketplace | registry
+	PluginID      string `json:"pluginId,omitempty"`
+	MarketplaceID string `json:"marketplaceId,omitempty"`
+	Path          string `json:"path,omitempty"` // workflows/<slug>
+}
+
+type WorkflowRequirement struct {
+	PluginID     string   `json:"pluginId"`
+	PluginName   string   `json:"pluginName,omitempty"`
+	ComponentIDs []string `json:"componentIds"`
+}
+
+type WorkflowSummary struct {
+	ID            string                `json:"id"`
+	Version       int                   `json:"version"`
+	SHA256        string                `json:"sha256"`
+	SchemaVersion int                   `json:"schemaVersion"`
+	Name          string                `json:"name"`
+	NameCN        string                `json:"name_cn"`
+	DomainLabel   string                `json:"domainLabel"`
+	Domains       []string              `json:"domains"`
+	Description   string                `json:"description"`
+	NodeCount     int                   `json:"nodeCount"`
+	Source        WorkflowSource        `json:"source"`
+	Requires      []WorkflowRequirement `json:"requires"`
+	Official      bool                  `json:"official"`
+	SortOrder     int                   `json:"sortOrder"`
+	UpdatedAt     string                `json:"updatedAt"`
+}
+
+type WorkflowListResponse struct {
+	Items     []WorkflowSummary `json:"items"`
+	CheckedAt string            `json:"checkedAt"`
+}
+
+type WorkflowDetail struct {
+	WorkflowSummary
+	Markdown string                   `json:"markdown"`
+	Releases []WorkflowReleaseSummary `json:"releases"` // version, sha256, notes, releasedAt
+}
+
+type WorkflowReleaseDocument struct {
+	ID            string `json:"id"`
+	Version       int    `json:"version"`
+	SHA256        string `json:"sha256"`
+	SchemaVersion int    `json:"schemaVersion"`
+	Markdown      string `json:"markdown"`
+}
+~~~
+
+管理端类型 `WorkflowAdminItem`、`WorkflowAdminDetail` 在 Workflow 身份与策展字段之外
+增加下架原因 `delistedBy`、`latestVersion`、最新 release 摘要和版本历史，见
+[admin/api_v4.md](./admin/api_v4.md)。
+
+## 11. 服务端内部边界
 
 `PackageArtifact.StoragePath` 是 SpeedSkills 服务端内部字段，不能出现在公共
 列表、详情或 package envelope 中。SpeedClaw 只消费 envelope 的
